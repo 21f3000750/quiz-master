@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import nulls_last
+from sqlalchemy.orm import backref
 from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash,check_password_hash
 
@@ -42,10 +43,11 @@ class Chapter(db.Model):
 class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     chapter_id = db.Column(db.Integer, db.ForeignKey('chapter.id'))
-    chapter_title= db.Column(db.String(255), nullable=True)
+    chapter = db.relationship("Chapter", backref=backref("chapter", uselist=False))
     date_of_quiz = db.Column(db.String(255), nullable=True)
     hour_duration = db.Column(db.String(255), nullable=True)
     min_duration = db.Column(db.String(255), nullable=True)
+    max_marks = db.Column(db.Integer, nullable=True)
     questions=db.relationship("Question", backref=db.backref('quiz', lazy=True))
 
 class Question(db.Model):
@@ -63,6 +65,8 @@ class Question(db.Model):
 class Score(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'))
+    quiz = db.relationship("Quiz", backref=backref("quiz", uselist=False))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship("User", backref=backref("user", uselist=False))
     time_stamp_of_attempt = db.Column(db.DateTime(timezone=True), onupdate=func.now())
     total_scored = db.Column(db.String(64), nullable=False)

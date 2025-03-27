@@ -1,0 +1,31 @@
+<nav
+  class="navbar navbar-expand-xl my-2 bg-dark border-bottom border-body"
+  data-bs-theme="dark"
+>
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">Quiz Master</a>
+    <div class="d-flex">
+      <li>
+        <a href="{{url_for('user_dashboard')}}" class="btn btn-sm  btn-primary mt-2">
+               Home
+           </a>
+            <a href="{{url_for('user_scores')}}" class="btn btn-sm btn-outline-primary mt-2">
+               Scores
+           </a>
+      </li>
+      <li class="pt-2">
+        <span class="text-white">Welcome, {{session['user_id']}}</span>
+      </li>
+      <li>
+        <a href="/logout" class="btn btn-danger">Logout</a>
+      </li>
+    </div>
+  </div>
+</nav>
+
+<style>
+  .navbar {
+    width: 100%;
+    padding: 0;
+  }
+</style>

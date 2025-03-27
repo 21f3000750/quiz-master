@@ -1,11 +1,14 @@
 from calendar import c
 
 from flask import Flask,request,render_template,url_for,redirect, flash,session,current_app as app,jsonify
+from flask.globals import request_ctx
+from flask_sqlalchemy.session import Session
 from sqlalchemy.testing.suite.test_reflection import users
 
-from models import db, User, Subject, Chapter, Quiz,Question
+from models import db, User, Subject, Chapter, Quiz, Question, Score
 from werkzeug.security import generate_password_hash,check_password_hash
 from datetime import datetime
+import random
 
 @app.route('/')
 def index():
@@ -112,7 +115,14 @@ def user_dashboard():
     print(user)
     print("User Dashboard")
     print(session)
-    return render_template('user/userDashboard.html',user=user)
+    print(datetime.today().strftime('%Y-%m-%d'))
+    todays_date=datetime.today().strftime('%Y-%m-%d')
+    quizzes=Quiz.query.filter(Quiz.date_of_quiz>=todays_date)
+    scores=Score.query.filter_by(user_id=user_id).all()
+    attempted={""}
+    for s in scores:
+        attempted.add(s.quiz_id)
+    return render_template('user/userDashboard.html',user=user,quizzes=quizzes,todays_date=todays_date,attempted=attempted)
 
 @app.route('/admindashboard')
 def admin_dashboard():
@@ -323,11 +333,11 @@ def add_quiz():
 
     if request.method=='POST':
         chapter_id = request.form['chapter']
-        chaptern=Chapter.query.filter_by(id=request.form['chapter']).first().name
         date = request.form['date']
         hours = request.form['hours']
         minutes = request.form['minutes']
-        quiz=Quiz(chapter_id=chapter_id,chapter_title=chaptern,date_of_quiz=date,hour_duration=hours,min_duration=minutes)
+        max_marks = request.form['max_marks']
+        quiz=Quiz(chapter_id=chapter_id,date_of_quiz=date,hour_duration=hours,min_duration=minutes,max_marks=max_marks)
         db.session.add(quiz)
         db.session.commit()
         flash('Quiz Added Successfully')
@@ -486,6 +496,46 @@ def delete_question():
     print(question)
     return render_template('question/delete_question.html', question_id=question_id, question=question)
 
+
+# Quiz Controller
+@app.route('/quiz/attempt',methods=['POST','GET'])
+def attempt_quiz():
+    print(request.method)
+    quiz_id = request.args.get('quiz', type=int)
+    quiz=Quiz.query.filter_by(id=quiz_id).first()
+    random.shuffle(quiz.questions)
+
+    if request.method=='POST':
+        qscore=0;
+        for i in quiz.questions:
+            qid="q"+str(i.id)
+            input=request.form.get(qid)
+            question=Question.query.filter_by(id=i.id).first()
+            if(input==question.correct_option):
+                qscore+=1;
+        userid=session['user_id']
+        scr=quiz.max_marks/len(quiz.questions) * qscore
+        score=Score(quiz_id=quiz_id,total_scored=scr,user_id=userid,time_stamp_of_attempt=datetime.now())
+        db.session.add(score)
+        db.session.commit()
+        flash('Quiz Attempted')
+        return redirect(url_for('user_scores'))
+
+    return render_template('quiz/attempt.html',quiz=quiz,quiz_id=quiz_id)
+
+@app.route('/quiz/view')
+def view_quiz():
+    quiz_id = request.args.get('quiz', type=int)
+    quiz=Quiz.query.filter_by(id=quiz_id).first()
+
+    return render_template('quiz/view.html',quiz=quiz)
+
+@app.route('/user/scores')
+def user_scores():
+    user=session['user_id']
+    scores=Score.query.filter_by(user_id=user).all()
+
+    return render_template('scores/view.html',scores=scores)
 
 @app.route('/logout')
 def logout():
