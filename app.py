@@ -21,7 +21,7 @@ if not User.query.filter_by(userid='admin').first():
     db.session.commit()
     print("Admin Registered Successfully")
 
-from application.controller import *
+from controllers.controller import *
 
 if __name__ == '__main__':
     app.run(debug = True)
