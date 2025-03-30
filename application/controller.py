@@ -57,7 +57,7 @@ def register():
 
 
 # User
-
+# Backend Validation Already Done
 @app.route('/register',methods=['POST'])
 def register_user():
     print("Register Post Requested")
