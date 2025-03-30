@@ -78,13 +78,19 @@ content %}
   </div>
     {% set count.value = count.value + 1 %}
   {% endfor %}
+      {% if quiz.questions|length > 1 %}
     <div class="row">
-
       <div class="col-lg-12 text-center">
           <button type="button" id="prevBtn" class="btn btn-primary" onclick="prevQues()">Previous</button>
           <button type="button" id="nextBtn" class="btn btn-primary" onclick="nextQues()">Next</button>
       <button type="submit" class="btn btn-success mx-auto my-3" id="submitBtn" style="display:none;">Submit Quiz</button>
       </div>
+        {% else %}
+        <div class="row">
+        <div class="col-lg-12 text-center">
+        <button type="submit" class="btn btn-success mx-auto my-3" id="submitBtn">Submit Quiz</button>
+      </div>
+        {% endif %}
 
     </div>
 
@@ -94,6 +100,8 @@ content %}
 {% endblock %}
 
 {% block script %}
+
+{% if quiz.questions|length > 1 %}
 var forcedSubmit=false;
 var curQues=1;
 if(curQues==1){
@@ -135,7 +143,7 @@ if(curQues!={{quiz.questions|length}}){
 document.getElementById("submitBtn").style.display="none";
 }
 }
-
+{% endif %}
 
 function validateForm() {
   {% for q in quiz.questions %}
