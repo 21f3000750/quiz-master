@@ -38,6 +38,7 @@ class Subject(db.Model):
     created_on=db.Column(db.Date)
     chapters = db.relationship('Chapter', backref='subject', cascade='all, delete-orphan', lazy=True)
 
+
 class Chapter(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)

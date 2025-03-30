@@ -10,6 +10,8 @@ from werkzeug.security import generate_password_hash,check_password_hash
 from datetime import datetime
 import random
 
+# Generic Routes
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -18,6 +20,12 @@ def index():
 def login():
     if request.method=='GET':
         return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    print('Logout')
+    session.pop('user_id',None)
+    return redirect(url_for('login'))
 
 @app.route('/login',methods=['POST'])
 def login_process():
@@ -45,6 +53,8 @@ def register():
     print("Register Requested")
     return render_template('register.html')
 
+
+# User
 
 @app.route('/register',methods=['POST'])
 def register_user():
@@ -100,12 +110,6 @@ def user_delete():
     print(user)
     return render_template('user/delete_user.html', user_id=user_id, user=user)
 
-@app.route('/blah')
-def blaah():
-    users=User.query.all()
-    print(users)
-    return jsonify([user.serialize() for user in users])
-
 @app.route('/userdashboard')
 def user_dashboard():
     user_id=session.get('user_id')
@@ -130,6 +134,36 @@ def user_dashboard():
     for s in scores:
         attempted.add(s.quiz_id)
     return render_template('user/userDashboard.html',user=user,quizzes=quizzes,todays_date=todays_date,attempted=attempted)
+
+@app.route('/userSearch',methods=['POST'])
+def user_search():
+    if session.get('user_id')==None:
+        flash('Please Login')
+        return redirect(url_for('login'))
+    if session.get('user_id')=='admin':
+        flash('Invalid Request')
+        return redirect(url_for('admin_dashboard'))
+
+    param = request.form['param']
+    search = "%{}%".format(param)
+    todays_date=datetime.today().strftime('%Y-%m-%d')
+
+    quizzes = (
+        Quiz.query
+        .join(Chapter)
+        .filter(Chapter.name.ilike(f"%{search}%"))
+        .filter(Quiz.date_of_quiz >= todays_date)
+        .all()
+    )
+    # quizzes=Quiz.query.join(Chapter).filter(Chapter.name.like(search)).all()
+    subjects=Subject.query.filter(Subject.name.like(search)).all()
+
+    print(users)
+    print(subjects)
+    print("User Search")
+    return render_template('user/search.html',quizzes=quizzes,subjects=subjects)
+
+# Admin
 
 @app.route('/admindashboard')
 def admin_dashboard():
@@ -163,49 +197,12 @@ def admin_search():
     print("Admin Dashboard")
     return render_template('admin/search.html',chapters=chapters,users=users,subjects=subjects)
 
-@app.route('/userSearch',methods=['POST'])
-def user_search():
-    if session.get('user_id')==None:
-        flash('Please Login')
-        return redirect(url_for('login'))
-    if session.get('user_id')=='admin':
-        flash('Invalid Request')
-        return redirect(url_for('admin_dashboard'))
-
-    param = request.form['param']
-    search = "%{}%".format(param)
-    todays_date=datetime.today().strftime('%Y-%m-%d')
-
-    quizzes = (
-        Quiz.query
-        .join(Chapter)
-        .filter(Chapter.name.ilike(f"%{search}%"))
-        .filter(Quiz.date_of_quiz >= todays_date)
-        .all()
-    )
-    # quizzes=Quiz.query.join(Chapter).filter(Chapter.name.like(search)).all()
-    subjects=Subject.query.filter(Subject.name.like(search)).all()
-
-    print(users)
-    print(subjects)
-    print("User Search")
-    return render_template('user/search.html',quizzes=quizzes,subjects=subjects)
-
-
+# User Details for Admin
 @app.route('/userDetails')
 def user_details():
     print("User Details")
     users=User.query.filter(User.userid != 'admin').all()
     return render_template('admin/userDetails.html',users=users)
-
-@app.route('/quizdashboard')
-def quiz_dashboard():
-    if session.get('user_id')==None:
-        flash('Please Login')
-        return redirect(url_for('login'))
-    print("Quiz Dashboard")
-    quizzes=Quiz.query.all()
-    return render_template('quiz/quizDashboard.html',quizzes=quizzes)
 
 
 @app.route('/adminSummary')
@@ -215,6 +212,8 @@ def admin_summary():
         return redirect(url_for('user_dashboard'))
     print("Admin Summary")
     return render_template('admin/summary.html')
+
+# Subject
 
 @app.route('/subject/add',methods=['POST','GET'])
 def add_subject():
@@ -293,6 +292,8 @@ def delete_subject():
     print(subject)
     return render_template('subject/delete_subject.html', subject_id=subject_id, subject=subject)
 
+# Chapter
+
 @app.route('/chapter/add',methods=['POST','GET'])
 def add_chapter():
     subject_id = request.args.get('subject', default=1, type=int)
@@ -370,96 +371,7 @@ def delete_chapter():
     print(chapter)
     return render_template('chapter/delete_chapter.html', chapter_id=chapter_id, chapter=chapter)
 
-# Quiz Routes
-
-# Add Quiz
-@app.route('/quiz/add',methods=['POST','GET'])
-def add_quiz():
-    chapter_id = request.args.get('chapter', type=int)
-    if chapter_id=="":
-        flash('Invalid Chapter ID')
-    if session.get('user_id')==None:
-        flash('Please Login')
-        return redirect(url_for('login'))
-
-    if session.get('user_id')!='admin':
-        flash('Only Admins Can Access this Page')
-        return redirect(url_for('user_dashboard'))
-    chapter = Chapter.query.filter_by(id=chapter_id).first()
-
-    if request.method=='POST':
-        chapter_id = request.form['chapter']
-        date = request.form['date']
-        hours = request.form['hours']
-        minutes = request.form['minutes']
-        max_marks = request.form['max_marks']
-        quiz=Quiz(chapter_id=chapter_id,date_of_quiz=date,hour_duration=hours,min_duration=minutes,max_marks=max_marks)
-        db.session.add(quiz)
-        db.session.commit()
-        flash('Quiz Added Successfully')
-        return redirect(url_for('quiz_dashboard'))
-
-
-    return render_template('quiz/add_quiz.html',chapter=chapter)
-
-@app.route('/quiz/edit',methods=['POST','GET'])
-def edit_quiz():
-    quiz_id = request.args.get('quiz', type=int)
-    print(quiz_id)
-    if session.get('user_id')==None:
-        flash('Please Login')
-        return redirect(url_for('login'))
-
-    if session.get('user_id')!='admin':
-        flash('Only Admins Can Access this Page')
-        return redirect(url_for('user_dashboard'))
-
-    quiz = Quiz.query.filter_by(id=quiz_id).first()
-    if not quiz:
-        flash("Quiz not found!")
-        return redirect(url_for('admin_dashboard'))
-
-    if request.method=='POST':
-        date = request.form['date']
-        hours = request.form['hours']
-        minutes = request.form['minutes']
-        marks= request.form['max_marks']
-        print(date)
-        quiz.date_of_quiz=date
-        quiz.max_marks=marks
-        quiz.hour_duration=hours
-        quiz.min_duration=minutes
-        db.session.commit()
-        flash('Quiz Edited Successfully')
-        return redirect(url_for('quiz_dashboard'))
-    print(quiz)
-    return render_template('quiz/edit_quiz.html',quiz_id=quiz_id,quiz=quiz)
-
-@app.route('/quiz/delete',methods=['POST','GET'])
-def delete_quiz():
-    quiz_id = request.args.get('quiz', type=int)
-    print(quiz_id)
-    if session.get('user_id')==None:
-        flash('Please Login')
-        return redirect(url_for('login'))
-
-    if session.get('user_id')!='admin':
-        flash('Only Admins Can Access this Page')
-        return redirect(url_for('user_dashboard'))
-
-    quiz = Quiz.query.filter_by(id=quiz_id).first()
-    if not quiz:
-        flash("Quiz not found!")
-        return redirect(url_for('quiz_dashboard'))
-
-    if request.method=='POST':
-        db.session.delete(quiz)
-        db.session.commit()
-        flash('Quiz Deleted Successfully')
-        return redirect(url_for('quiz_dashboard'))
-
-    print(quiz)
-    return render_template('quiz/delete_quiz.html', quiz_id=quiz_id, quiz=quiz)
+# Question
 
 @app.route('/question/add',methods=['POST','GET'])
 def add_question():
@@ -555,7 +467,109 @@ def delete_question():
     return render_template('question/delete_question.html', question_id=question_id, question=question)
 
 
-# Quiz Controller
+# Quiz
+
+@app.route('/quizdashboard')
+def quiz_dashboard():
+    if session.get('user_id')==None:
+        flash('Please Login')
+        return redirect(url_for('login'))
+    print("Quiz Dashboard")
+    quizzes=Quiz.query.all()
+    return render_template('quiz/quizDashboard.html',quizzes=quizzes)
+
+
+
+# Add Quiz
+@app.route('/quiz/add',methods=['POST','GET'])
+def add_quiz():
+    chapter_id = request.args.get('chapter', type=int)
+    if chapter_id=="":
+        flash('Invalid Chapter ID')
+    if session.get('user_id')==None:
+        flash('Please Login')
+        return redirect(url_for('login'))
+
+    if session.get('user_id')!='admin':
+        flash('Only Admins Can Access this Page')
+        return redirect(url_for('user_dashboard'))
+    chapter = Chapter.query.filter_by(id=chapter_id).first()
+
+    if request.method=='POST':
+        chapter_id = request.form['chapter']
+        date = request.form['date']
+        hours = request.form['hours']
+        minutes = request.form['minutes']
+        max_marks = request.form['max_marks']
+        quiz=Quiz(chapter_id=chapter_id,date_of_quiz=date,hour_duration=hours,min_duration=minutes,max_marks=max_marks)
+        db.session.add(quiz)
+        db.session.commit()
+        flash('Quiz Added Successfully')
+        return redirect(url_for('quiz_dashboard'))
+
+
+    return render_template('quiz/add_quiz.html',chapter=chapter)
+
+@app.route('/quiz/edit',methods=['POST','GET'])
+def edit_quiz():
+    quiz_id = request.args.get('quiz', type=int)
+    print(quiz_id)
+    if session.get('user_id')==None:
+        flash('Please Login')
+        return redirect(url_for('login'))
+
+    if session.get('user_id')!='admin':
+        flash('Only Admins Can Access this Page')
+        return redirect(url_for('user_dashboard'))
+
+    quiz = Quiz.query.filter_by(id=quiz_id).first()
+    if not quiz:
+        flash("Quiz not found!")
+        return redirect(url_for('admin_dashboard'))
+
+    if request.method=='POST':
+        date = request.form['date']
+        hours = request.form['hours']
+        minutes = request.form['minutes']
+        marks= request.form['max_marks']
+        print(date)
+        quiz.date_of_quiz=date
+        quiz.max_marks=marks
+        quiz.hour_duration=hours
+        quiz.min_duration=minutes
+        db.session.commit()
+        flash('Quiz Edited Successfully')
+        return redirect(url_for('quiz_dashboard'))
+    print(quiz)
+    return render_template('quiz/edit_quiz.html',quiz_id=quiz_id,quiz=quiz)
+
+@app.route('/quiz/delete',methods=['POST','GET'])
+def delete_quiz():
+    quiz_id = request.args.get('quiz', type=int)
+    print(quiz_id)
+    if session.get('user_id')==None:
+        flash('Please Login')
+        return redirect(url_for('login'))
+
+    if session.get('user_id')!='admin':
+        flash('Only Admins Can Access this Page')
+        return redirect(url_for('user_dashboard'))
+
+    quiz = Quiz.query.filter_by(id=quiz_id).first()
+    if not quiz:
+        flash("Quiz not found!")
+        return redirect(url_for('quiz_dashboard'))
+
+    if request.method=='POST':
+        db.session.delete(quiz)
+        db.session.commit()
+        flash('Quiz Deleted Successfully')
+        return redirect(url_for('quiz_dashboard'))
+
+    print(quiz)
+    return render_template('quiz/delete_quiz.html', quiz_id=quiz_id, quiz=quiz)
+
+
 @app.route('/quiz/attempt',methods=['POST','GET'])
 def attempt_quiz():
     print(request.method)
@@ -595,8 +609,61 @@ def user_scores():
 
     return render_template('scores/view.html',scores=scores)
 
-@app.route('/logout')
-def logout():
-    print('Logout')
-    session.pop('user_id',None)
-    return redirect(url_for('login'))
+
+# APIs
+
+@app.route('/getAllSubjects')
+def get_all_subjects():
+    subjects=Subject.query.all()
+    print(subjects)
+    return jsonify([{"id": s.id, "name": s.name, "desc": s.desc,"created_on":s.created_on} for s in subjects])
+
+@app.route('/getSubjectById')
+def get_subjects_by_id():
+    subject_id = request.args.get('subject', type=int)
+    subjects=Subject.query.filter_by(id=subject_id)
+    print(subjects)
+    return jsonify([{"id": s.id, "name": s.name, "desc": s.desc,"created_on":s.created_on} for s in subjects])
+
+@app.route('/getAllChapters')
+def get_all_chapters():
+    chapters=Chapter.query.all()
+    print(chapters)
+    return jsonify([{"id": c.id, "name": c.name,"subject": c.subject_id, "desc": c.desc,"created_on":c.created_on} for c in chapters])
+
+@app.route('/getChapterById')
+def get_chapter_by_id():
+    chapter_id = request.args.get('chapter', type=int)
+    chapters=Chapter.query.filter_by(id=chapter_id)
+    print(chapters)
+    return jsonify([{"id": c.id, "name": c.name,"subject": c.subject_id, "desc": c.desc,"created_on":c.created_on} for c in chapters])
+
+
+@app.route('/getAllQuizzes')
+def get_all_quizzes():
+    quizzes=Quiz.query.all()
+    print(quizzes)
+    return jsonify([{"id": q.id, "chapter_id": q.chapter_id,"date_of_quiz": q.date_of_quiz, "hour_duration": q.hour_duration,"min_duration":q.min_duration,"max_marks":q.max_marks} for q in quizzes])
+
+@app.route('/getQuizById')
+def get_quiz_by_id():
+    quiz_id = request.args.get('quiz', type=int)
+    quizzes=Quiz.query.filter_by(id=quiz_id)
+    print(quizzes)
+    return jsonify([{"id": q.id, "chapter_id": q.chapter_id,"date_of_quiz": q.date_of_quiz, "hour_duration": q.hour_duration,"min_duration":q.min_duration,"max_marks":q.max_marks} for q in quizzes])
+
+
+@app.route('/getAllScores')
+def get_all_scores():
+    scores=Score.query.all()
+    print(scores)
+    return jsonify([{"id": s.id,"quiz_id": s.quiz_id, "user_id": s.user_id,"total_scored":s.total_scored,"time_stamp_of_attempt":s.time_stamp_of_attempt} for s in scores])
+
+@app.route('/getScoreById')
+def get_score_by_id():
+    quiz_id = request.args.get('quiz', type=int)
+    scores=(Score.query
+            .join(Quiz)
+            .filter(Quiz.id == quiz_id))
+    print(scores)
+    return jsonify([{"id": s.id,"quiz_id": s.quiz_id, "user_id": s.user_id,"total_scored":s.total_scored,"time_stamp_of_attempt":s.time_stamp_of_attempt} for s in scores])
