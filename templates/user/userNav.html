@@ -3,21 +3,24 @@
   data-bs-theme="dark"
 >
   <div class="container-fluid">
-    <a class="navbar-brand" href="/">Quiz Master</a>
+    <a class="navbar-brand mt-0" href="/">Quiz Master</a>
     <div class="d-flex">
-      <li>
-        <a href="{{url_for('user_dashboard')}}" class="btn btn-sm  btn-primary mt-2">
+      <li class="">
+        <a href="{{url_for('user_dashboard')}}" class="btn btn-sm  btn-primary mt-0">
                Home
            </a>
-            <a href="{{url_for('user_scores')}}" class="btn btn-sm btn-outline-primary mt-2">
+            <a href="{{url_for('user_scores')}}" class="btn btn-sm btn-outline-primary mt-0">
                Scores
            </a>
       </li>
+        <form action="/userSearch" method="post" class="px-3 pt-0 mt-0">
+                <input type="text" name="param" class="form-control form-control-sm" placeholder="Search">
+            </form>
       <li class="pt-2">
         <span class="text-white">Welcome, {{session['user_id']}}</span>
       </li>
       <li>
-        <a href="/logout" class="btn btn-danger">Logout</a>
+        <a href="/logout" class="btn btn-sm btn-danger mt-0">Logout</a>
       </li>
     </div>
   </div>

@@ -15,6 +15,11 @@ class User(db.Model):
     dob = db.Column(db.String(64), nullable=True)
     created_on = db.Column(db.Date)
 
+    def serialize(self):
+        return {"id": self.id,
+                "userid": self.userid,
+                "name": self.name}
+
     @property
     def password(self):
         raise AttributeError('password is not a readable attribute')
@@ -31,28 +36,28 @@ class Subject(db.Model):
     name = db.Column(db.String(64), nullable=False)
     desc = db.Column(db.String(255), nullable=True)
     created_on=db.Column(db.Date)
-    chapters=db.relationship("Chapter", backref=db.backref('subject', lazy=True))
+    chapters = db.relationship('Chapter', backref='subject', cascade='all, delete-orphan', lazy=True)
 
 class Chapter(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'))
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id', ondelete="CASCADE"),nullable=False)
     desc = db.Column(db.String(255), nullable=True)
     created_on = db.Column(db.Date)
 
 class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    chapter_id = db.Column(db.Integer, db.ForeignKey('chapter.id'))
-    chapter = db.relationship("Chapter", backref=backref("chapter", uselist=False))
+    chapter_id = db.Column(db.Integer, db.ForeignKey('chapter.id', ondelete="CASCADE"))
+    chapter = db.relationship("Chapter", backref="chapter", uselist=False)
     date_of_quiz = db.Column(db.String(255), nullable=True)
     hour_duration = db.Column(db.String(255), nullable=True)
     min_duration = db.Column(db.String(255), nullable=True)
     max_marks = db.Column(db.Integer, nullable=True)
-    questions=db.relationship("Question", backref=db.backref('quiz', lazy=True))
+    questions=db.relationship("Question", backref='quiz', lazy=True)
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'))
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id', ondelete="CASCADE"))
     question_title = db.Column(db.String(255), nullable=True)
     question_statement = db.Column(db.String(255), nullable=True)
     option_1 = db.Column(db.String(255), nullable=True)
@@ -64,9 +69,9 @@ class Question(db.Model):
 
 class Score(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'))
-    quiz = db.relationship("Quiz", backref=backref("quiz", uselist=False))
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    user = db.relationship("User", backref=backref("user", uselist=False))
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id', ondelete="CASCADE"))
+    quiz = db.relationship("Quiz", backref="quiz", uselist=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete="CASCADE"))
+    user = db.relationship("User", backref="user", uselist=False)
     time_stamp_of_attempt = db.Column(db.DateTime(timezone=True), onupdate=func.now())
     total_scored = db.Column(db.String(64), nullable=False)

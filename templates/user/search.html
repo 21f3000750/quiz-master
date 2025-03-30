@@ -1,20 +1,21 @@
 {% extends 'base.html' %} {% block title %} Quiz Master {% endblock %} {% block
 content %} {% include 'user/userNav.html' %}
-<h1 class="h1 text-center text-white mt-3">User Dashboard</h1>
-
-{% if quizzes|length>0 %}
+<h1 class="h1 text-center text-white mt-3 mb-5">User Search</h1>
+<h1>
+</h1>
+{% if quizzes|length > 0 %}
 <div class="col-sm-8 mx-auto my-5">
     <div class="card text-bg-secondary mb-3">
       <div class="card-header font-bold text-center text-xl">
           <h3>
-              Upcoming Quizzes
+              Quizzes
           </h3>
       </div>
       <div class="card-body">
         <table
           class="table table-dark table-rounded table-bordered rounded rounded-lg text-center"
         >
-          <thead>
+            <thead>
 
             <tr class="">
                 <th scope="col">Subject</th>
@@ -63,17 +64,40 @@ content %} {% include 'user/userNav.html' %}
       </div>
     </div>
   </div>
-{% else %}
-<div class="col-lg-12 pt-5 mx-auto text-center text-white">
-<h3 >No Upcoming Quizzes Found</h3>
-</div>
 {% endif %}
-{% endblock %} {% block script %} {% endblock %}
 
-{% block style %}
-table a.disabled {
-  pointer-events: none;
-  cursor: default;
-}
+{% if subjects|length > 0 %}
+<div class="col-sm-8 mx-auto my-5">
+    <div class="card text-bg-secondary mb-3">
+      <div class="card-header font-bold text-center text-xl">
+          <h3>
+              Subject
+          </h3>
+      </div>
+      <div class="card-body">
+        <table
+          class="table table-dark table-rounded table-bordered rounded rounded-lg text-center"
+        ><thead>
+            <tr class="">
+                <th scope="col">Subject</th>
+              <th scope="col">Description</th>
+              <th scope="col"  width="30%">Chapters</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for subject in subjects %}
+            <tr>
+              <th scope="row">{{subject.name}}</th>
+              <td>{{subject.desc}}</td>
+              <td>{{subject.chapters|length}}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endif %}
 
 {% endblock %}

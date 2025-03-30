@@ -100,6 +100,12 @@ def user_delete():
     print(user)
     return render_template('user/delete_user.html', user_id=user_id, user=user)
 
+@app.route('/blah')
+def blaah():
+    users=User.query.all()
+    print(users)
+    return jsonify([user.serialize() for user in users])
+
 @app.route('/userdashboard')
 def user_dashboard():
     user_id=session.get('user_id')
@@ -117,8 +123,9 @@ def user_dashboard():
     print(session)
     print(datetime.today().strftime('%Y-%m-%d'))
     todays_date=datetime.today().strftime('%Y-%m-%d')
-    quizzes=Quiz.query.filter(Quiz.date_of_quiz>=todays_date)
+    quizzes=Quiz.query.filter(Quiz.date_of_quiz>=todays_date).all()
     scores=Score.query.filter_by(user_id=user_id).all()
+    print(quizzes)
     attempted={""}
     for s in scores:
         attempted.add(s.quiz_id)
@@ -135,6 +142,55 @@ def admin_dashboard():
     print("Admin Dashboard")
     subjects=Subject.query.all();
     return render_template('admin/adminDashboard.html',subjects=subjects)
+
+@app.route('/adminSearch',methods=['POST'])
+def admin_search():
+    if session.get('user_id')==None:
+        flash('Please Login')
+        return redirect(url_for('login'))
+    if session.get('user_id')!='admin':
+        flash('Invalid Request')
+        return redirect(url_for('user_dashboard'))
+
+    param = request.form['param']
+    search = "%{}%".format(param)
+    users=User.query.filter(User.name.like(search) , User.userid != 'admin').all()
+    subjects=Subject.query.filter(Subject.name.like(search)).all()
+    chapters=Chapter.query.filter(Chapter.name.like(search)).all()
+    print(users)
+    print(subjects)
+    print(chapters)
+    print("Admin Dashboard")
+    return render_template('admin/search.html',chapters=chapters,users=users,subjects=subjects)
+
+@app.route('/userSearch',methods=['POST'])
+def user_search():
+    if session.get('user_id')==None:
+        flash('Please Login')
+        return redirect(url_for('login'))
+    if session.get('user_id')=='admin':
+        flash('Invalid Request')
+        return redirect(url_for('admin_dashboard'))
+
+    param = request.form['param']
+    search = "%{}%".format(param)
+    todays_date=datetime.today().strftime('%Y-%m-%d')
+
+    quizzes = (
+        Quiz.query
+        .join(Chapter)
+        .filter(Chapter.name.ilike(f"%{search}%"))
+        .filter(Quiz.date_of_quiz >= todays_date)
+        .all()
+    )
+    # quizzes=Quiz.query.join(Chapter).filter(Chapter.name.like(search)).all()
+    subjects=Subject.query.filter(Subject.name.like(search)).all()
+
+    print(users)
+    print(subjects)
+    print("User Search")
+    return render_template('user/search.html',quizzes=quizzes,subjects=subjects)
+
 
 @app.route('/userDetails')
 def user_details():
@@ -367,8 +423,10 @@ def edit_quiz():
         date = request.form['date']
         hours = request.form['hours']
         minutes = request.form['minutes']
+        marks= request.form['max_marks']
         print(date)
         quiz.date_of_quiz=date
+        quiz.max_marks=marks
         quiz.hour_duration=hours
         quiz.min_duration=minutes
         db.session.commit()
