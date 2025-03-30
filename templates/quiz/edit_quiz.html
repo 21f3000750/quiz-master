@@ -24,6 +24,19 @@ content %} {% include 'admin/adminNav.html' %}
           value="{{quiz.date_of_quiz}}"
         />
       </div>
+            <div class="input-group mb-3 col-lg-4">
+        <span class="input-group-text"
+          >Total Marks</span
+        >
+        <input
+          type="number"
+          name="max_marks"
+          id="max_marks"
+          class="form-control"
+          value="{{quiz.max_marks}}"
+          required
+        />
+      </div>
         <div class="input-group mb-3 col-lg-4">
         <span class="input-group-text">Duration</span>
         <select class="form-select" name="hours" id="hours">

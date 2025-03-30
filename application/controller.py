@@ -3,6 +3,8 @@ from calendar import c
 from flask import Flask,request,render_template,url_for,redirect, flash,session,current_app as app,jsonify
 from flask.globals import request_ctx
 from flask_sqlalchemy.session import Session
+from sqlalchemy import extract
+from sqlalchemy.sql import func
 from sqlalchemy.testing.suite.test_reflection import users
 
 from models import db, User, Subject, Chapter, Quiz, Question, Score
@@ -135,6 +137,40 @@ def user_dashboard():
         attempted.add(s.quiz_id)
     return render_template('user/userDashboard.html',user=user,quizzes=quizzes,todays_date=todays_date,attempted=attempted)
 
+@app.route('/userSummary')
+def user_summary():
+    user_id = session.get('user_id')
+    user_quizzes = (
+        db.session.query(
+            Subject.id.label("subject_id"),
+            Subject.name.label("subject_name"),
+            func.count(Score.id).label("quiz_count")
+        )
+        .join(Chapter, Chapter.subject_id == Subject.id)
+        .join(Quiz, Quiz.chapter_id == Chapter.id)
+        .join(Score, Score.quiz_id == Quiz.id)
+        .filter(Score.user_id == user_id)
+        .group_by(Subject.id, Subject.name)
+        .order_by(func.count(Score.id).desc())
+        .all()
+    )
+    user_scores = (
+        db.session.query(
+            Quiz.id.label("quiz_id"),
+            Chapter.name.label("chapter"),
+            Score.total_scored.label("total_scored"),
+        )
+        .join(Score, Score.quiz_id == Quiz.id)
+        .join(Chapter, Chapter.id == Quiz.chapter_id)
+        .filter(Score.user_id == user_id)
+        .order_by(Score.time_stamp_of_attempt.desc())
+        .all()
+    )
+
+    print(user_scores)
+    print(user_quizzes)
+    return render_template('user/summary.html',user_quizzes=user_quizzes,user_scores=user_scores)
+
 @app.route('/userSearch',methods=['POST'])
 def user_search():
     if session.get('user_id')==None:
@@ -155,7 +191,6 @@ def user_search():
         .filter(Quiz.date_of_quiz >= todays_date)
         .all()
     )
-    # quizzes=Quiz.query.join(Chapter).filter(Chapter.name.like(search)).all()
     subjects=Subject.query.filter(Subject.name.like(search)).all()
 
     print(users)
@@ -210,8 +245,33 @@ def admin_summary():
     if session.get('user_id')!='admin':
         flash('Invalid Request')
         return redirect(url_for('user_dashboard'))
+
+    chapter_counts = (
+        db.session.query(
+            Subject.name.label("subject_name"),
+            func.count(Chapter.id).label("chapter_count")
+        )
+        .outerjoin(Chapter, Chapter.subject_id == Subject.id)
+        .group_by(Subject.id, Subject.name)
+        .all()
+    )
+
+    quiz_attempts = (
+        db.session.query(
+            Chapter.id.label("chapter_id"),
+            Chapter.name.label("chapter_name"),
+            func.count(Score.id).label("attempt_count")
+        )
+        .join(Quiz, Quiz.chapter_id == Chapter.id)
+        .join(Score, Score.quiz_id == Quiz.id)
+        .group_by(Chapter.id, Chapter.name)
+        .all()
+    )
+
+    print(chapter_counts)
+    print(quiz_attempts)
     print("Admin Summary")
-    return render_template('admin/summary.html')
+    return render_template('admin/summary.html',chapter_counts=chapter_counts,quiz_attempts=quiz_attempts)
 
 # Subject
 

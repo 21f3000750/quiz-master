@@ -55,6 +55,7 @@ class Quiz(db.Model):
     min_duration = db.Column(db.String(255), nullable=True)
     max_marks = db.Column(db.Integer, nullable=True)
     questions=db.relationship("Question", backref='quiz', lazy=True)
+    scores = db.relationship("Score", backref='score', lazy=True)
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -71,7 +72,7 @@ class Question(db.Model):
 class Score(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id', ondelete="CASCADE"))
-    quiz = db.relationship("Quiz", backref="quiz", uselist=False)
+    quiz = db.relationship("Quiz", backref="quiz", uselist=False, viewonly=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete="CASCADE"))
     user = db.relationship("User", backref="user", uselist=False)
     time_stamp_of_attempt = db.Column(db.DateTime(timezone=True), onupdate=func.now())
